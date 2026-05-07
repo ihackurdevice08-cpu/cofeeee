@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>원두 수량 현황</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f2ea;
+      --panel: #fffaf2;
+      --ink: #221b15;
+      --muted: #766b60;
+      --line: #ded4c7;
+      --accent: #1f6f5b;
+      --accent-strong: #155241;
+      --warn: #a85f13;
+      --shadow: 0 18px 45px rgba(44, 34, 23, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        linear-gradient(135deg, rgba(31, 111, 91, 0.12), transparent 34%),
+        linear-gradient(315deg, rgba(168, 95, 19, 0.12), transparent 38%),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    main {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 44px 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    button,
+    a.button {
+      min-height: 42px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 0 14px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    button.secondary,
+    a.button.secondary {
+      background: rgba(255, 250, 242, 0.74);
+      color: var(--accent-strong);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metric,
+    .table-wrap {
+      border: 1px solid rgba(118, 107, 96, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 250, 242, 0.86);
+      box-shadow: var(--shadow);
+    }
+
+    .metric {
+      padding: 18px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    .metric strong {
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .status {
+      min-height: 42px;
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .status strong {
+      color: var(--ink);
+    }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .bean-card {
+      border: 1px solid rgba(118, 107, 96, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 250, 242, 0.9);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .bean-photo {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #e9dfd2;
+      object-fit: cover;
+      display: block;
+    }
+
+    .bean-photo.missing {
+      padding: 24px;
+      object-fit: contain;
+    }
+
+    .table-photo {
+      width: 86px;
+      height: 64px;
+      border-radius: 8px;
+      background: #e9dfd2;
+      object-fit: cover;
+      display: block;
+    }
+
+    .bean-info {
+      padding: 16px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .bean-info h2 {
+      margin: 0 0 5px;
+      font-size: 20px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .bean-info span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .bean-qty {
+      color: var(--accent-strong);
+      font-size: 34px;
+      font-weight: 900;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .table-wrap {
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      background: var(--panel);
+    }
+
+    th,
+    td {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #efe6d9;
+      color: #4a4037;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    td {
+      font-size: 18px;
+      font-weight: 750;
+    }
+
+    td.qty {
+      width: 150px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-size: 26px;
+      color: var(--accent-strong);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .empty,
+    .error {
+      padding: 28px 20px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .error {
+      color: var(--warn);
+      font-weight: 750;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        width: min(100% - 24px, 1040px);
+        padding: 28px 0;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: flex-start;
+        width: 100%;
+      }
+
+      button,
+      a.button {
+        flex: 1 1 148px;
+        justify-content: center;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .inventory-grid {
+        grid-template-columns: 1fr;
+      }
+
+      th,
+      td {
+        padding: 15px 14px;
+      }
+
+      td {
+        font-size: 16px;
+      }
+
+      td.qty {
+        width: 112px;
+        font-size: 23px;
+      }
+
+      .status {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="topbar" aria-label="원두 수량 현황 헤더">
+      <div class="brand">
+        <p class="eyebrow">B2B COFFEE INVENTORY</p>
+        <h1>원두 수량 현황</h1>
+      </div>
+      <div class="actions">
+        <button id="refreshButton" type="button" title="Google Sheet에서 최신 수량을 다시 불러옵니다.">새로고침</button>
+        <a class="button secondary" href="https://docs.google.com/spreadsheets/d/1SzG0uE0cArCwieE3GOazuRf-dosbvyE2ib6b9_uIGPc/edit?gid=0#gid=0" target="_blank" rel="noopener">시트 열기</a>
+        <a class="button secondary" href="https://www.appsheet.com/start/c39ccb93-59b7-4213-818a-17ad55fea243" target="_blank" rel="noopener">AppSheet</a>
+      </div>
+    </section>
+
+    <section class="summary" aria-label="요약">
+      <article class="metric">
+        <span>원두 종류</span>
+        <strong id="kindCount">-</strong>
+      </article>
+      <article class="metric">
+        <span>총 수량</span>
+        <strong id="totalQty">-</strong>
+      </article>
+      <article class="metric">
+        <span>마지막 확인</span>
+        <strong id="lastUpdated">-</strong>
+      </article>
+    </section>
+
+    <p class="status">
+      <span id="statusText">Google Sheet에서 데이터를 불러오는 중입니다.</span>
+      <strong id="sheetName">원두 수량</strong>
+    </p>
+
+    <section class="inventory-grid" id="inventoryCards" aria-label="원두별 수량 카드"></section>
+
+    <section class="table-wrap" aria-label="원두별 수량 표">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">사진</th>
+            <th scope="col">원두 종류</th>
+            <th scope="col">수량</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryBody">
+          <tr>
+            <td colspan="3" class="empty">잠시만 기다려 주세요.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      Google Sheet의 A열은 원두 종류, B열은 수량, C열은 원두 사진 경로로 사용합니다. 시트에서 값을 바꾸면 이 페이지는 새로고침 시 최신 값을 다시 읽습니다.
+    </footer>
+  </main>
+
+  <script>
+    const SHEET_ID = "1SzG0uE0cArCwieE3GOazuRf-dosbvyE2ib6b9_uIGPc";
+    const SHEET_GID = "0";
+    const QUERY = "select A, B, C where A is not null";
+
+    const els = {
+      body: document.getElementById("inventoryBody"),
+      cards: document.getElementById("inventoryCards"),
+      kindCount: document.getElementById("kindCount"),
+      totalQty: document.getElementById("totalQty"),
+      lastUpdated: document.getElementById("lastUpdated"),
+      refreshButton: document.getElementById("refreshButton"),
+      statusText: document.getElementById("statusText")
+    };
+
+    let activeScript = null;
+
+    function loadSheetData() {
+      const callbackName = `receiveSheetData_${Date.now()}`;
+      const url = new URL(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`);
+      url.searchParams.set("gid", SHEET_GID);
+      url.searchParams.set("tq", QUERY);
+      url.searchParams.set("tqx", `out:json;responseHandler:${callbackName}`);
+
+      els.refreshButton.disabled = true;
+      els.statusText.textContent = "Google Sheet에서 데이터를 불러오는 중입니다.";
+
+      if (activeScript) {
+        activeScript.remove();
+      }
+
+      window[callbackName] = function(response) {
+        delete window[callbackName];
+        if (activeScript) {
+          activeScript.remove();
+          activeScript = null;
+        }
+        els.refreshButton.disabled = false;
+
+        if (response.status === "error") {
+          renderError(response.errors?.[0]?.detailed_message || "시트 데이터를 읽을 수 없습니다.");
+          return;
+        }
+
+        renderRows(parseRows(response.table));
+      };
+
+      activeScript = document.createElement("script");
+      activeScript.src = url.toString();
+      activeScript.onerror = function() {
+        delete window[callbackName];
+        els.refreshButton.disabled = false;
+        renderError("Google Sheet 접근 권한을 확인해 주세요.");
+      };
+      document.head.appendChild(activeScript);
+    }
+
+    function parseRows(table) {
+      return (table.rows || [])
+        .map((row) => {
+          const name = row.c?.[0]?.f || row.c?.[0]?.v || "";
+          const rawQty = row.c?.[1]?.v ?? row.c?.[1]?.f ?? "";
+          const imagePath = row.c?.[2]?.f || row.c?.[2]?.v || "";
+          const qty = Number(String(rawQty).replace(/,/g, ""));
+
+          return {
+            name: String(name).trim(),
+            qty: Number.isFinite(qty) ? qty : 0,
+            imagePath: String(imagePath).trim()
+          };
+        })
+        .filter((item) => item.name && item.name !== "원두 종류");
+    }
+
+    function renderRows(rows) {
+      if (!rows.length) {
+        els.cards.innerHTML = "";
+        els.body.innerHTML = '<tr><td colspan="3" class="empty">표시할 원두 수량이 없습니다.</td></tr>';
+        updateSummary(rows);
+        els.statusText.textContent = "표시할 데이터가 없습니다.";
+        return;
+      }
+
+      els.cards.innerHTML = rows.map((item) => `
+        <article class="bean-card">
+          <img class="bean-photo" src="${escapeHtml(toImageSrc(item.imagePath))}" alt="${escapeHtml(item.name)} 원두 사진" loading="lazy" onerror="this.classList.add('missing'); this.src='${missingImageSrc()}';">
+          <div class="bean-info">
+            <div>
+              <h2>${escapeHtml(item.name)}</h2>
+              <span>현재 수량</span>
+            </div>
+            <strong class="bean-qty">${formatNumber(item.qty)}</strong>
+          </div>
+        </article>
+      `).join("");
+
+      els.body.innerHTML = rows.map((item) => `
+        <tr>
+          <td><img class="table-photo" src="${escapeHtml(toImageSrc(item.imagePath))}" alt="${escapeHtml(item.name)} 원두 사진" loading="lazy" onerror="this.src='${missingImageSrc()}';"></td>
+          <td>${escapeHtml(item.name)}</td>
+          <td class="qty">${formatNumber(item.qty)}</td>
+        </tr>
+      `).join("");
+
+      updateSummary(rows);
+      els.statusText.textContent = "최신 수량을 표시하고 있습니다.";
+    }
+
+    function renderError(message) {
+      els.cards.innerHTML = "";
+      els.body.innerHTML = `<tr><td colspan="3" class="error">${escapeHtml(message)}</td></tr>`;
+      els.kindCount.textContent = "-";
+      els.totalQty.textContent = "-";
+      els.lastUpdated.textContent = "-";
+      els.statusText.textContent = "불러오기에 실패했습니다.";
+    }
+
+    function updateSummary(rows) {
+      const total = rows.reduce((sum, item) => sum + item.qty, 0);
+      const now = new Date();
+
+      els.kindCount.textContent = formatNumber(rows.length);
+      els.totalQty.textContent = formatNumber(total);
+      els.lastUpdated.textContent = now.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("ko-KR").format(value);
+    }
+
+    function toImageSrc(path) {
+      if (!path) {
+        return missingImageSrc();
+      }
+
+      if (/^https?:\/\//i.test(path)) {
+        return path;
+      }
+
+      return path
+        .split("/")
+        .map((part) => encodeURIComponent(part))
+        .join("/");
+    }
+
+    function missingImageSrc() {
+      return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='480' viewBox='0 0 640 480'%3E%3Crect width='640' height='480' fill='%23e9dfd2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23766b60' font-family='Arial,sans-serif' font-size='28' font-weight='700'%3E이미지 없음%3C/text%3E%3C/svg%3E";
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    els.refreshButton.addEventListener("click", loadSheetData);
+    loadSheetData();
+  </script>
+</body>
+</html>
